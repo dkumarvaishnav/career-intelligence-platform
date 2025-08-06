@@ -1,0 +1,8 @@
+streamlit
+spacy
+pandas
+numpy
+neo4j
+lightfm
+scikit-learn
+plotly
