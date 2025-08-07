@@ -1,15 +1,28 @@
-# app.py
 import streamlit as st
-from PIL import Image
+from streamlit_extras.switch_page_button import switch_page
 
-st.set_page_config(page_title="Career Intelligence Platform", layout="wide")
+st.set_page_config(
+    page_title="Career Intelligence Platform",
+    page_icon="🎯",
+    layout="wide",
+)
 
-st.title("🎓 Career Intelligence Platform")
-st.subheader("AI-powered Resume Parsing, Career Recommendations, and Skill Gap Detection")
-
+st.title("Welcome to the Career Intelligence Platform 🎓")
 st.markdown("---")
 
-st.image("https://cdni.iconscout.com/illustration/premium/thumb/career-growth-7065027-5742065.png", use_column_width=True)
+st.markdown("""
+This is a prototype platform aimed at:
+- Parsing resumes
+- Matching suitable jobs
+- Recommending career paths
+- Identifying skill gaps
 
-if st.button("📊 Go to Dashboard"):
-    st.switch_page("src/dashboard/dashboard.py")
+Use the button below or the sidebar to explore different features.
+""")
+
+# Direct Button to Dashboard
+if st.button("Go to Dashboard ➡️"):
+    switch_page("dashboard")  # ✅ only the filename without `.py`
+
+
+st.info("Or use the **sidebar** to explore the platform.")
