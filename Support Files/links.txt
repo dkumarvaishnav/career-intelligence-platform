@@ -1,0 +1,8 @@
+noran-mohamed/Resume-Classification-Dataset
+https://github.com/noran-mohamed/Resume-Classification-Dataset
+
+InferencePrince555/Resume-Dataset
+https://huggingface.co/datasets/InferencePrince555/Resume-Dataset
+
+opensporks/resumes
+https://huggingface.co/datasets/opensporks/resumes
