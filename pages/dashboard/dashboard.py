@@ -1,4 +1,12 @@
-import streamlit as st
+# pyright: reportMissingImports=false
+try:
+    import streamlit as st  # type: ignore
+except ImportError:  # pragma: no cover
+    class _StreamlitStub:
+        def __getattr__(self, _name):  # noqa: D401
+            raise ImportError("streamlit is required to run this page")
+
+    st = _StreamlitStub()  # type: ignore
 
 st.set_page_config(page_title="Dashboard", layout="wide")
 

@@ -35,12 +35,18 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## 2.1. Install spaCy model (needed for resume parsing)
+
+```bash
+python -m spacy download en_core_web_sm
+```
+
 ---
 
 ## 3. Run the App
 
 ```bash
-streamlit run main.py
+streamlit run app.py
 ```
 
 Then open browser: [http://localhost:8501](http://localhost:8501/)

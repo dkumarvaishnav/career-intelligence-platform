@@ -6,3 +6,4 @@ neo4j
 lightfm
 scikit-learn
 plotly
+streamlit-extras
