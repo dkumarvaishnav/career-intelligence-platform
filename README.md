@@ -19,7 +19,7 @@ AI-powered platform for:
 
 ```bash
 # 1. Clone the repository
-git clone [https://github.com/dkumarvaishnav/career-intelligence-platform.git](https://github.com/dkumarvaishnav/career-intelligence-platform.git)
+git clone https://github.com/dkumarvaishnav/career-intelligence-platform.git
 cd career-intelligence-platform
 
 # 2. Create virtual environment
