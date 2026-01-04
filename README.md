@@ -482,32 +482,13 @@ The comprehensive 7-section report displays skill scores with progress bars, gap
 
 ---
 
-## 👥 Contributors
-
-| Name | Role | GitHub |
-|------|------|--------|
-| Kumar Vaishnav | Project Lead & Developer | [@Kumarvaishnav](https://github.com/Kumarvaishnav) |
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
-
-- **Google DeepMind** — For the Gemini AI model
-- **LangChain** — For the excellent LLM framework
-- **Vercel** — For Next.js and React frameworks
-- **FastAPI** — For the high-performance Python web framework
-
----
-
 <div align="center">
-
-**Made with ❤️ for Career Development**
 
 *"Calibration over Aspiration — Know where you stand, focus where it matters."*
 
