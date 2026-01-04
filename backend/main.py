@@ -1,44 +1,53 @@
-# backend/main.py
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from backend.resume_parser import extract_text_from_pdf
+from backend.models import AnalysisRequest, AnalysisResponse # Import models to validate schema early
 
 app = FastAPI(title="Career Intelligence Platform API")
 
-# --- Models ---
-class Resume(BaseModel):
-    name: str
-    skills: list[str]
+# Configure CORS for Next.js frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allow all origins for dev resilience (VS Code ports, etc.)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# --- Routes ---
 @app.get("/")
-def home():
-    return {"message": "Career Intelligence Platform API is live 🚀"}
+def root():
+    return RedirectResponse(url="/docs")
 
-@app.post("/parse_resume/")
-def parse_resume(resume: Resume):
-    # Just a dummy response for now
-    return {
-        "name": resume.name,
-        "skills": resume.skills,
-        "parsed": True
-    }
+@app.get("/health")
+def read_root():
+    return {"status": "ok", "service": "career-intelligence-backend"}
 
-@app.get("/recommendations/")
-def get_recommendations():
-    # Dummy placeholder
-    return {
-        "recommendations": [
-            {"title": "Data Scientist", "required_skills": ["Python", "ML", "SQL"]},
-            {"title": "Backend Engineer", "required_skills": ["Python", "APIs", "Databases"]}
-        ]
-    }
+@app.post("/api/parse-resume")
+async def parse_resume(file: UploadFile = File(...)):
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    
+    try:
+        content = await file.read()
+        text = extract_text_from_pdf(content)
+        return {"filename": file.filename, "text": text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/skill_gap/")
-def skill_gap():
-    # Dummy placeholder
-    return {
-        "gaps": [
-            {"skill": "Deep Learning", "current_level": "None", "required_level": "Intermediate"},
-            {"skill": "SQL", "current_level": "Beginner", "required_level": "Advanced"}
-        ]
-    }
+from backend.ai_engine import analyze_resume
+
+@app.post("/api/analyze", response_model=AnalysisResponse)
+async def analyze_endpoint(request: AnalysisRequest):
+    """
+    Analyzes the resume text against the target role.
+    """
+    try:
+        # Pass just the role title for now, or expand logic to use description
+        role = request.target_role.role_title
+        if request.target_role.level:
+            role += f" ({request.target_role.level})"
+            
+        return analyze_resume(request.resume_text, role)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
