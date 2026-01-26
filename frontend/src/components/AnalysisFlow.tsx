@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
     Upload, ChevronRight, CheckCircle, AlertCircle, Loader2,
-    Target, BarChart3, Briefcase, AlertTriangle, Lightbulb, FileText, Award
+    Target, BarChart3, Briefcase, AlertTriangle, Lightbulb, FileText, Award,
+    Sparkles, TrendingUp, Shield, Zap, ArrowRight, RefreshCw
 } from "lucide-react";
 
 // --- Types matching new backend schema ---
@@ -42,43 +43,525 @@ interface AnalysisResponse {
     };
 }
 
-// --- Utility ---
+// --- Tab Types ---
+type TabId = "summary" | "skills" | "experience" | "gaps" | "action" | "resume";
+
+interface Tab {
+    id: TabId;
+    label: string;
+    icon: React.ReactNode;
+    description: string;
+}
+
+// --- Utility Functions ---
 function getScoreColor(score: number): string {
-    if (score >= 8) return "text-green-400";
-    if (score >= 6) return "text-yellow-400";
+    if (score >= 8) return "text-emerald-400";
+    if (score >= 6) return "text-amber-400";
     if (score >= 4) return "text-orange-400";
-    return "text-red-400";
+    return "text-rose-400";
+}
+
+function getScoreGradient(score: number): string {
+    if (score >= 8) return "from-emerald-500 to-teal-500";
+    if (score >= 6) return "from-amber-500 to-yellow-500";
+    if (score >= 4) return "from-orange-500 to-amber-500";
+    return "from-rose-500 to-red-500";
 }
 
 function getSeverityColor(severity: string): string {
-    if (severity === "High") return "bg-red-500/10 text-red-400 border-red-500/20";
-    if (severity === "Medium") return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
-    return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    if (severity === "High") return "bg-rose-500/15 text-rose-400 border-rose-500/30";
+    if (severity === "Medium") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+    return "bg-sky-500/15 text-sky-400 border-sky-500/30";
+}
+
+function getSeverityGlow(severity: string): string {
+    if (severity === "High") return "shadow-rose-500/20";
+    if (severity === "Medium") return "shadow-amber-500/20";
+    return "shadow-sky-500/20";
 }
 
 function getFitColor(category: string): string {
-    if (category === "Strong Fit") return "text-green-400";
-    if (category === "Near-Fit") return "text-yellow-400";
+    if (category === "Strong Fit") return "text-emerald-400";
+    if (category === "Near-Fit") return "text-amber-400";
     if (category === "Partial Fit") return "text-orange-400";
-    return "text-red-400";
+    return "text-rose-400";
 }
 
-const skillLabels: Record<keyof SkillBreakdown, string> = {
-    programming_software_engineering: "Programming & Software Engineering",
-    machine_learning_foundations: "Machine Learning Foundations",
-    applied_ml_ai_projects: "Applied ML/AI Projects",
-    mlops_cloud_readiness: "MLOps & Cloud Readiness",
-    data_engineering_sql: "Data Engineering & SQL",
-    system_design_architecture: "System Design & Architecture",
-    communication_documentation: "Communication & Documentation"
+function getFitGradient(category: string): string {
+    if (category === "Strong Fit") return "from-emerald-500 to-teal-500";
+    if (category === "Near-Fit") return "from-amber-500 to-yellow-500";
+    if (category === "Partial Fit") return "from-orange-500 to-amber-500";
+    return "from-rose-500 to-red-500";
+}
+
+const skillLabels: Record<keyof SkillBreakdown, { name: string; icon: string }> = {
+    programming_software_engineering: { name: "Programming & Software Engineering", icon: "💻" },
+    machine_learning_foundations: { name: "Machine Learning Foundations", icon: "🧠" },
+    applied_ml_ai_projects: { name: "Applied ML/AI Projects", icon: "🚀" },
+    mlops_cloud_readiness: { name: "MLOps & Cloud Readiness", icon: "☁️" },
+    data_engineering_sql: { name: "Data Engineering & SQL", icon: "🗄️" },
+    system_design_architecture: { name: "System Design & Architecture", icon: "🏗️" },
+    communication_documentation: { name: "Communication & Documentation", icon: "📝" }
 };
 
+const tabs: Tab[] = [
+    { id: "summary", label: "Summary", icon: <Target className="w-4 h-4" />, description: "Overall readiness assessment" },
+    { id: "skills", label: "Skills", icon: <BarChart3 className="w-4 h-4" />, description: "Detailed skill breakdown" },
+    { id: "experience", label: "Experience", icon: <Briefcase className="w-4 h-4" />, description: "Demonstrated work" },
+    { id: "gaps", label: "Gaps", icon: <AlertTriangle className="w-4 h-4" />, description: "Areas for improvement" },
+    { id: "action", label: "Action Plan", icon: <Lightbulb className="w-4 h-4" />, description: "Next steps" },
+    { id: "resume", label: "Resume Tips", icon: <FileText className="w-4 h-4" />, description: "Document improvements" },
+];
+
+// --- Animation Variants ---
+const tabContentVariants: Variants = {
+    initial: { opacity: 0, y: 20, scale: 0.98 },
+    animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: "easeOut" as const } },
+    exit: { opacity: 0, y: -20, scale: 0.98, transition: { duration: 0.2, ease: "easeIn" as const } }
+};
+
+const staggerContainer: Variants = {
+    animate: { transition: { staggerChildren: 0.05 } }
+};
+
+const staggerItem: Variants = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
+
+// --- Tab Content Components ---
+function SummaryTab({ result }: { result: AnalysisResponse }) {
+    const scorePercentage = result.overall_fit.overall_score;
+
+    return (
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-8">
+            {/* Hero Score Section */}
+            <motion.div variants={staggerItem} className="relative overflow-hidden rounded-3xl glass p-8 md:p-12">
+                {/* Background Glow */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${getFitGradient(result.overall_fit.fit_category)} opacity-10`} />
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 rounded-full blur-3xl" />
+
+                <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
+                    {/* Score Circle */}
+                    <div className="relative">
+                        <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 120 120">
+                            <circle
+                                cx="60" cy="60" r="52"
+                                stroke="currentColor"
+                                strokeWidth="8"
+                                fill="none"
+                                className="text-white/10"
+                            />
+                            <motion.circle
+                                cx="60" cy="60" r="52"
+                                stroke="url(#scoreGradient)"
+                                strokeWidth="8"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeDasharray={`${scorePercentage * 3.27} 327`}
+                                initial={{ strokeDasharray: "0 327" }}
+                                animate={{ strokeDasharray: `${scorePercentage * 3.27} 327` }}
+                                transition={{ duration: 1.5, ease: "easeOut" }}
+                            />
+                            <defs>
+                                <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" className={`${getFitColor(result.overall_fit.fit_category).replace('text-', 'stop-color-')}`} style={{ stopColor: result.overall_fit.fit_category === "Strong Fit" ? "#10b981" : result.overall_fit.fit_category === "Near-Fit" ? "#f59e0b" : result.overall_fit.fit_category === "Partial Fit" ? "#f97316" : "#f43f5e" }} />
+                                    <stop offset="100%" className="text-primary" style={{ stopColor: "#6366f1" }} />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <motion.span
+                                className="text-5xl font-bold text-white"
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.5, duration: 0.5 }}
+                            >
+                                {scorePercentage}
+                            </motion.span>
+                            <span className="text-zinc-400 text-sm">/100</span>
+                        </div>
+                    </div>
+
+                    {/* Fit Category & Summary */}
+                    <div className="flex-1 text-center lg:text-left">
+                        <motion.div
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${getFitGradient(result.overall_fit.fit_category)} mb-4`}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 }}
+                        >
+                            <Sparkles className="w-4 h-4 text-white" />
+                            <span className="text-white font-semibold">{result.overall_fit.fit_category}</span>
+                        </motion.div>
+                        <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Role Readiness Assessment</h2>
+                        <p className="text-zinc-300 text-lg leading-relaxed">{result.overall_fit.summary}</p>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Hiring Verdict Card */}
+            <motion.div
+                variants={staggerItem}
+                className={`rounded-3xl p-8 border-2 ${result.hiring_verdict.is_hireable_now
+                    ? 'bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border-emerald-500/30'
+                    : 'bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/30'}`}
+            >
+                <div className="flex items-start gap-6">
+                    <div className={`p-4 rounded-2xl ${result.hiring_verdict.is_hireable_now ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`}>
+                        <Award className={`w-8 h-8 ${result.hiring_verdict.is_hireable_now ? 'text-emerald-400' : 'text-amber-400'}`} />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-xl font-bold text-white mb-2">Hiring Verdict</h3>
+                        <p className={`text-2xl font-bold mb-4 ${result.hiring_verdict.is_hireable_now ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {result.hiring_verdict.verdict}
+                        </p>
+                        {result.hiring_verdict.minimum_bar_missing && (
+                            <div className="flex items-start gap-2 mb-4 p-3 rounded-xl bg-black/20">
+                                <Shield className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-zinc-300 text-sm">
+                                    <span className="text-amber-400 font-medium">Minimum bar missing:</span> {result.hiring_verdict.minimum_bar_missing}
+                                </p>
+                            </div>
+                        )}
+                        <p className="text-lg text-white flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-primary" />
+                            {result.hiring_verdict.final_recommendation}
+                        </p>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Quick Stats Grid */}
+            <motion.div variants={staggerItem} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <QuickStat
+                    icon={<BarChart3 className="w-5 h-5" />}
+                    label="Skills Evaluated"
+                    value="7"
+                    color="text-primary"
+                />
+                <QuickStat
+                    icon={<CheckCircle className="w-5 h-5" />}
+                    label="Demonstrated Work"
+                    value={result.demonstrated_work.length.toString()}
+                    color="text-emerald-400"
+                />
+                <QuickStat
+                    icon={<AlertTriangle className="w-5 h-5" />}
+                    label="Gaps Identified"
+                    value={result.detected_gaps.length.toString()}
+                    color="text-amber-400"
+                />
+                <QuickStat
+                    icon={<Lightbulb className="w-5 h-5" />}
+                    label="Action Items"
+                    value={result.action_plan.length.toString()}
+                    color="text-cyan-400"
+                />
+            </motion.div>
+        </motion.div>
+    );
+}
+
+function QuickStat({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
+    return (
+        <div className="glass rounded-2xl p-5 text-center hover:scale-105 transition-transform duration-300">
+            <div className={`inline-flex p-2 rounded-xl bg-white/5 ${color} mb-3`}>{icon}</div>
+            <div className="text-3xl font-bold text-white mb-1">{value}</div>
+            <div className="text-xs text-zinc-400">{label}</div>
+        </div>
+    );
+}
+
+function SkillsTab({ result }: { result: AnalysisResponse }) {
+    return (
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Skill Breakdown</h2>
+                <p className="text-zinc-400">Detailed assessment of your technical competencies</p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 gap-5">
+                {(Object.entries(result.skill_breakdown) as [keyof SkillBreakdown, SkillScore][]).map(([key, skill], index) => (
+                    <motion.div
+                        key={key}
+                        variants={staggerItem}
+                        custom={index}
+                        className="glass rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300 group"
+                    >
+                        <div className="flex items-start gap-4">
+                            <div className="text-3xl">{skillLabels[key].icon}</div>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-start mb-3">
+                                    <h3 className="font-semibold text-white text-sm group-hover:text-primary transition-colors">
+                                        {skillLabels[key].name}
+                                    </h3>
+                                    <div className={`text-2xl font-bold ${getScoreColor(skill.score)}`}>
+                                        {skill.score}<span className="text-sm text-zinc-500">/10</span>
+                                    </div>
+                                </div>
+
+                                {/* Progress Bar */}
+                                <div className="relative h-3 bg-white/10 rounded-full overflow-hidden mb-3">
+                                    <motion.div
+                                        className={`h-full rounded-full bg-gradient-to-r ${getScoreGradient(skill.score)}`}
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${skill.score * 10}%` }}
+                                        transition={{ duration: 0.8, delay: index * 0.1, ease: "easeOut" }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/10" />
+                                </div>
+
+                                <p className="text-sm text-zinc-400 leading-relaxed">{skill.justification}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+        </motion.div>
+    );
+}
+
+function ExperienceTab({ result }: { result: AnalysisResponse }) {
+    const evidenceTypeColors: Record<string, string> = {
+        "Project": "bg-violet-500/20 text-violet-400 border-violet-500/30",
+        "Deployment": "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+        "Tool Usage": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+        "End-to-End Ownership": "bg-amber-500/20 text-amber-400 border-amber-500/30"
+    };
+
+    return (
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Demonstrated Work</h2>
+                <p className="text-zinc-400">Verified accomplishments from your resume</p>
+            </motion.div>
+
+            {result.demonstrated_work.length === 0 ? (
+                <motion.div variants={staggerItem} className="glass rounded-2xl p-12 text-center">
+                    <Briefcase className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+                    <p className="text-zinc-400">No demonstrated work items found in your resume.</p>
+                </motion.div>
+            ) : (
+                <div className="space-y-4">
+                    {result.demonstrated_work.map((work, index) => (
+                        <motion.div
+                            key={index}
+                            variants={staggerItem}
+                            custom={index}
+                            className="glass rounded-2xl p-6 hover:scale-[1.01] transition-all duration-300 border-l-4 border-emerald-500/50"
+                        >
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 rounded-xl bg-emerald-500/10">
+                                    <CheckCircle className="w-6 h-6 text-emerald-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-white text-lg mb-3">{work.description}</p>
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${evidenceTypeColors[work.evidence_type] || evidenceTypeColors["Project"]}`}>
+                                        <TrendingUp className="w-3 h-3" />
+                                        {work.evidence_type}
+                                    </span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+function GapsTab({ result }: { result: AnalysisResponse }) {
+    return (
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Detected Gaps</h2>
+                <p className="text-zinc-400">Areas requiring attention for your target role</p>
+            </motion.div>
+
+            {result.detected_gaps.length === 0 ? (
+                <motion.div variants={staggerItem} className="glass rounded-2xl p-12 text-center">
+                    <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
+                    <p className="text-emerald-400 font-medium">No significant gaps detected!</p>
+                </motion.div>
+            ) : (
+                <div className="space-y-5">
+                    {result.detected_gaps.map((gap, index) => (
+                        <motion.div
+                            key={index}
+                            variants={staggerItem}
+                            custom={index}
+                            className={`glass rounded-2xl p-6 hover:scale-[1.01] transition-all duration-300 shadow-lg ${getSeverityGlow(gap.severity)}`}
+                        >
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${gap.severity === "High" ? "bg-rose-500/20" : gap.severity === "Medium" ? "bg-amber-500/20" : "bg-sky-500/20"}`}>
+                                        <AlertTriangle className={`w-5 h-5 ${gap.severity === "High" ? "text-rose-400" : gap.severity === "Medium" ? "text-amber-400" : "text-sky-400"}`} />
+                                    </div>
+                                    <h3 className="font-semibold text-lg text-white">{gap.gap_name}</h3>
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(gap.severity)}`}>
+                                    {gap.severity} Priority
+                                </span>
+                            </div>
+
+                            <div className="space-y-3 pl-12">
+                                <div className="p-4 rounded-xl bg-white/5">
+                                    <p className="text-sm text-zinc-300">
+                                        <span className="text-amber-400 font-medium">Why it matters:</span> {gap.why_it_matters}
+                                    </p>
+                                </div>
+                                <div className="p-4 rounded-xl bg-white/5">
+                                    <p className="text-sm text-zinc-400">
+                                        <span className="text-rose-400 font-medium">Missing evidence:</span> {gap.missing_evidence}
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+function ActionTab({ result }: { result: AnalysisResponse }) {
+    return (
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Action Plan</h2>
+                <p className="text-zinc-400">Prioritized steps to improve your role readiness</p>
+            </motion.div>
+
+            {result.action_plan.length === 0 ? (
+                <motion.div variants={staggerItem} className="glass rounded-2xl p-12 text-center">
+                    <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
+                    <p className="text-emerald-400 font-medium">You&apos;re in great shape! No immediate actions needed.</p>
+                </motion.div>
+            ) : (
+                <div className="relative">
+                    {/* Timeline Line */}
+                    <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-cyan-500 to-emerald-500 hidden md:block" />
+
+                    <div className="space-y-6">
+                        {result.action_plan.map((item, index) => (
+                            <motion.div
+                                key={index}
+                                variants={staggerItem}
+                                custom={index}
+                                className="relative md:pl-20"
+                            >
+                                {/* Timeline Node */}
+                                <div className="absolute left-4 top-8 w-8 h-8 rounded-full bg-gradient-to-r from-primary to-cyan-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary/30 hidden md:flex">
+                                    {index + 1}
+                                </div>
+
+                                <div className="glass rounded-2xl p-6 hover:scale-[1.01] transition-all duration-300 border-l-4 border-primary/50 md:border-l-0">
+                                    <div className="flex items-center gap-3 mb-4 md:hidden">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
+                                            {index + 1}
+                                        </div>
+                                        <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
+                                            Addresses: {item.gap_addressed}
+                                        </span>
+                                    </div>
+
+                                    <div className="hidden md:block mb-3">
+                                        <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary">
+                                            Addresses: {item.gap_addressed}
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                        <Lightbulb className="w-5 h-5 text-primary" />
+                                        {item.what_to_build}
+                                    </h3>
+
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="p-4 rounded-xl bg-white/5">
+                                            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Project Scope</p>
+                                            <p className="text-sm text-zinc-300">{item.project_scope}</p>
+                                        </div>
+                                        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                                            <p className="text-xs text-emerald-400 uppercase tracking-wider mb-1">Success Outcome</p>
+                                            <p className="text-sm text-emerald-300">{item.success_outcome}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+function ResumeTab({ result }: { result: AnalysisResponse }) {
+    const issueTypeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
+        "Lacks Depth": { bg: "bg-amber-500/20 text-amber-400", icon: <TrendingUp className="w-4 h-4" /> },
+        "No Proof": { bg: "bg-rose-500/20 text-rose-400", icon: <Shield className="w-4 h-4" /> },
+        "Missing Metrics": { bg: "bg-violet-500/20 text-violet-400", icon: <BarChart3 className="w-4 h-4" /> },
+        "Needs Clarification": { bg: "bg-cyan-500/20 text-cyan-400", icon: <AlertCircle className="w-4 h-4" /> },
+        "Should Remove": { bg: "bg-zinc-500/20 text-zinc-400", icon: <AlertTriangle className="w-4 h-4" /> }
+    };
+
+    return (
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Resume Recommendations</h2>
+                <p className="text-zinc-400">Specific improvements for your resume document</p>
+            </motion.div>
+
+            {result.resume_recommendations.length === 0 ? (
+                <motion.div variants={staggerItem} className="glass rounded-2xl p-12 text-center">
+                    <FileText className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
+                    <p className="text-emerald-400 font-medium">Your resume looks excellent! No improvements needed.</p>
+                </motion.div>
+            ) : (
+                <div className="space-y-4">
+                    {result.resume_recommendations.map((rec, index) => {
+                        const style = issueTypeStyles[rec.issue_type] || issueTypeStyles["Needs Clarification"];
+
+                        return (
+                            <motion.div
+                                key={index}
+                                variants={staggerItem}
+                                custom={index}
+                                className="glass rounded-2xl p-6 hover:scale-[1.01] transition-all duration-300"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className={`p-3 rounded-xl ${style.bg}`}>
+                                        {style.icon}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${style.bg}`}>
+                                                {rec.issue_type}
+                                            </span>
+                                            <ArrowRight className="w-4 h-4 text-zinc-500" />
+                                            <span className="text-sm font-medium text-white">{rec.section_or_bullet}</span>
+                                        </div>
+                                        <p className="text-zinc-300">{rec.recommendation}</p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+// --- Main Component ---
 export default function AnalysisFlow() {
     const [step, setStep] = useState<"input" | "analyzing" | "result">("input");
     const [role, setRole] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [result, setResult] = useState<AnalysisResponse | null>(null);
     const [error, setError] = useState("");
+    const [activeTab, setActiveTab] = useState<TabId>("summary");
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -116,6 +599,7 @@ export default function AnalysisFlow() {
             const analyzeData = await analyzeRes.json();
 
             setResult(analyzeData);
+            setActiveTab("summary");
             setStep("result");
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : String(err));
@@ -123,8 +607,22 @@ export default function AnalysisFlow() {
         }
     };
 
+    const renderTabContent = () => {
+        if (!result) return null;
+
+        switch (activeTab) {
+            case "summary": return <SummaryTab result={result} />;
+            case "skills": return <SkillsTab result={result} />;
+            case "experience": return <ExperienceTab result={result} />;
+            case "gaps": return <GapsTab result={result} />;
+            case "action": return <ActionTab result={result} />;
+            case "resume": return <ResumeTab result={result} />;
+            default: return null;
+        }
+    };
+
     return (
-        <div className="w-full max-w-5xl mx-auto min-h-[60vh] relative">
+        <div className="w-full max-w-6xl mx-auto min-h-[60vh] relative px-4">
             <AnimatePresence mode="wait">
 
                 {/* INPUT STEP */}
@@ -137,58 +635,77 @@ export default function AnalysisFlow() {
                         className="flex flex-col gap-8"
                     >
                         <div className="space-y-2 text-center mb-8">
-                            <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
-                                Start Calibration
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm mb-4"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                AI-Powered Analysis
+                            </motion.div>
+                            <h2 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-zinc-400">
+                                Start Your Calibration
                             </h2>
-                            <p className="text-zinc-400">Upload your PDF and define your target.</p>
+                            <p className="text-zinc-400 text-lg">Upload your resume and define your career target</p>
                         </div>
 
                         <div className="glass p-6 rounded-2xl space-y-4">
-                            <label className="text-sm font-medium text-zinc-300">Target Role</label>
+                            <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                                <Target className="w-4 h-4 text-primary" />
+                                Target Role
+                            </label>
                             <input
                                 type="text"
                                 value={role}
                                 onChange={(e) => setRole(e.target.value)}
-                                placeholder="e.g. Senior Data Scientist"
-                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                placeholder="e.g. ML Engineer, Data Scientist, Backend Developer"
+                                className="w-full bg-black/30 border border-white/10 rounded-xl px-5 py-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all text-lg"
                             />
                         </div>
 
-                        <div className="glass p-8 rounded-2xl border-dashed border-2 border-white/10 hover:border-primary/50 transition-all group cursor-pointer relative">
+                        <div className="glass p-10 rounded-2xl border-dashed border-2 border-white/10 hover:border-primary/50 transition-all group cursor-pointer relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <input
                                 type="file"
                                 accept=".pdf"
                                 onChange={handleFileChange}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             />
-                            <div className="flex flex-col items-center gap-4 text-zinc-400 group-hover:text-primary transition-colors">
-                                <div className="p-4 rounded-full bg-white/5 group-hover:bg-primary/10">
-                                    <Upload className="w-8 h-8" />
+                            <div className="flex flex-col items-center gap-4 text-zinc-400 group-hover:text-primary transition-colors relative z-0">
+                                <div className="p-5 rounded-2xl bg-white/5 group-hover:bg-primary/10 transition-colors">
+                                    <Upload className="w-10 h-10" />
                                 </div>
                                 <div className="text-center">
-                                    <p className="font-medium text-white group-hover:text-primary">
-                                        {file ? file.name : "Drop resume PDF here"}
+                                    <p className="font-semibold text-xl text-white group-hover:text-primary transition-colors">
+                                        {file ? file.name : "Drop your resume PDF here"}
                                     </p>
-                                    <p className="text-xs text-zinc-500 mt-1">
-                                        {file ? "Click to change" : "or click to browse"}
+                                    <p className="text-sm text-zinc-500 mt-2">
+                                        {file ? "Click to change file" : "or click to browse your files"}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
                         {error && (
-                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-2">
-                                <AlertCircle className="w-5 h-5" />
-                                {error}
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center gap-3"
+                            >
+                                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                <span>{error}</span>
+                            </motion.div>
                         )}
 
                         <button
                             onClick={startAnalysis}
                             disabled={!role || !file}
-                            className="w-full py-4 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-white shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                            className="w-full py-5 bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-bold text-lg text-white shadow-xl shadow-primary/25 transition-all flex items-center justify-center gap-3 group"
                         >
-                            Analyze Readiness <ChevronRight className="w-5 h-5" />
+                            <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                            Analyze My Readiness
+                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </motion.div>
                 )}
@@ -199,15 +716,27 @@ export default function AnalysisFlow() {
                         key="analyzing"
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="flex flex-col items-center justify-center py-20 gap-6"
+                        className="flex flex-col items-center justify-center py-24 gap-8"
                     >
                         <div className="relative">
-                            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
-                            <Loader2 className="w-16 h-16 text-primary animate-spin relative z-10" />
+                            <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full animate-pulse" />
+                            <div className="relative z-10 p-8 rounded-full bg-gradient-to-br from-primary/20 to-violet-500/20 border border-primary/30">
+                                <Loader2 className="w-16 h-16 text-primary animate-spin" />
+                            </div>
                         </div>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-2xl font-bold text-white">Analyzing Skills...</h3>
-                            <p className="text-zinc-400">Comparing your profile against {role} standards.</p>
+                        <div className="text-center space-y-3">
+                            <h3 className="text-3xl font-bold text-white">Analyzing Your Profile</h3>
+                            <p className="text-zinc-400 text-lg">Comparing against <span className="text-primary font-medium">{role}</span> standards...</p>
+                        </div>
+                        <div className="flex gap-2">
+                            {[0, 1, 2].map((i) => (
+                                <motion.div
+                                    key={i}
+                                    className="w-3 h-3 rounded-full bg-primary"
+                                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                                    transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                                />
+                            ))}
                         </div>
                     </motion.div>
                 )}
@@ -218,168 +747,54 @@ export default function AnalysisFlow() {
                         key="result"
                         initial={{ opacity: 0, y: 50 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="space-y-8"
+                        className="space-y-6"
                     >
-                        {/* Section 1: Overall Fit */}
-                        <div className="glass p-8 rounded-2xl text-center">
-                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-zinc-400 mb-4">
-                                <Target className="w-4 h-4" />
-                                Overall Fit Assessment
-                            </div>
-                            <div className="flex items-center justify-center gap-8 mb-4">
-                                <div className="text-6xl font-bold text-white">
-                                    {result.overall_fit.overall_score}
-                                    <span className="text-2xl text-zinc-500">/100</span>
-                                </div>
-                                <div className={`text-3xl font-bold ${getFitColor(result.overall_fit.fit_category)}`}>
-                                    {result.overall_fit.fit_category}
-                                </div>
-                            </div>
-                            <p className="text-zinc-400 max-w-2xl mx-auto">{result.overall_fit.summary}</p>
-                        </div>
-
-                        {/* Section 2: Skill Breakdown */}
-                        <div className="glass p-6 rounded-2xl">
-                            <div className="flex items-center gap-2 mb-6">
-                                <BarChart3 className="w-5 h-5 text-primary" />
-                                <h3 className="text-xl font-semibold text-white">Skill Breakdown</h3>
-                            </div>
-                            <div className="grid md:grid-cols-2 gap-4">
-                                {(Object.entries(result.skill_breakdown) as [keyof SkillBreakdown, SkillScore][]).map(([key, skill]) => (
-                                    <div key={key} className="p-4 rounded-xl bg-white/5 border border-white/5">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="font-medium text-white text-sm">{skillLabels[key]}</span>
-                                            <span className={`text-xl font-bold ${getScoreColor(skill.score)}`}>
-                                                {skill.score}/10
-                                            </span>
-                                        </div>
-                                        <div className="w-full bg-white/10 rounded-full h-2 mb-2">
-                                            <div
-                                                className="bg-primary h-2 rounded-full transition-all"
-                                                style={{ width: `${skill.score * 10}%` }}
+                        {/* Tab Navigation */}
+                        <div className="glass rounded-2xl p-2 sticky top-4 z-20 backdrop-blur-xl">
+                            <div className="flex overflow-x-auto gap-1 pb-1 scrollbar-hide">
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`relative flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${activeTab === tab.id
+                                            ? "text-white"
+                                            : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                            }`}
+                                    >
+                                        {activeTab === tab.id && (
+                                            <motion.div
+                                                layoutId="activeTab"
+                                                className="absolute inset-0 bg-gradient-to-r from-primary/80 to-violet-600/80 rounded-xl"
+                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                             />
-                                        </div>
-                                        <p className="text-xs text-zinc-400">{skill.justification}</p>
-                                    </div>
+                                        )}
+                                        <span className="relative z-10">{tab.icon}</span>
+                                        <span className="relative z-10">{tab.label}</span>
+                                    </button>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="grid md:grid-cols-2 gap-6">
-                            {/* Section 3: Demonstrated Work */}
-                            <div className="glass p-6 rounded-2xl">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Briefcase className="w-5 h-5 text-green-400" />
-                                    <h3 className="text-xl font-semibold text-white">Demonstrated Work</h3>
-                                </div>
-                                <div className="space-y-3">
-                                    {result.demonstrated_work.map((work, i) => (
-                                        <div key={i} className="p-3 rounded-xl bg-green-500/5 border border-green-500/10">
-                                            <div className="flex items-start gap-2">
-                                                <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                                                <div>
-                                                    <p className="text-sm text-white">{work.description}</p>
-                                                    <span className="text-xs text-green-400">{work.evidence_type}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Section 4: Detected Gaps */}
-                            <div className="glass p-6 rounded-2xl">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                                    <h3 className="text-xl font-semibold text-white">Detected Gaps</h3>
-                                </div>
-                                <div className="space-y-3">
-                                    {result.detected_gaps.map((gap, i) => (
-                                        <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className="font-medium text-white text-sm">{gap.gap_name}</span>
-                                                <span className={`text-xs px-2 py-0.5 rounded border ${getSeverityColor(gap.severity)}`}>
-                                                    {gap.severity}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-zinc-400 mb-1"><strong>Why it matters:</strong> {gap.why_it_matters}</p>
-                                            <p className="text-xs text-zinc-500"><strong>Missing:</strong> {gap.missing_evidence}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Section 5: Action Plan */}
-                        <div className="glass p-6 rounded-2xl border-primary/20 bg-primary/5">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Lightbulb className="w-5 h-5 text-primary" />
-                                <h3 className="text-xl font-semibold text-white">Action Plan</h3>
-                            </div>
-                            <div className="space-y-4">
-                                {result.action_plan.map((item, i) => (
-                                    <div key={i} className="p-4 rounded-xl bg-black/20 border border-white/5">
-                                        <div className="flex gap-4">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-white">
-                                                {i + 1}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-xs text-primary mb-1">Addresses: {item.gap_addressed}</p>
-                                                <h4 className="font-medium text-white mb-2">{item.what_to_build}</h4>
-                                                <p className="text-sm text-zinc-400 mb-2"><strong>Scope:</strong> {item.project_scope}</p>
-                                                <p className="text-sm text-green-400"><strong>Success:</strong> {item.success_outcome}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Section 6: Resume Recommendations */}
-                        <div className="glass p-6 rounded-2xl">
-                            <div className="flex items-center gap-2 mb-4">
-                                <FileText className="w-5 h-5 text-blue-400" />
-                                <h3 className="text-xl font-semibold text-white">Resume Recommendations</h3>
-                            </div>
-                            <div className="space-y-3">
-                                {result.resume_recommendations.map((rec, i) => (
-                                    <div key={i} className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/20 flex-shrink-0">
-                                                {rec.issue_type}
-                                            </span>
-                                            <div>
-                                                <p className="text-sm text-zinc-300 mb-1"><strong>{rec.section_or_bullet}</strong></p>
-                                                <p className="text-sm text-zinc-400">{rec.recommendation}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Section 7: Hiring Verdict */}
-                        <div className={`glass p-8 rounded-2xl text-center ${result.hiring_verdict.is_hireable_now ? 'border-green-500/30 bg-green-500/5' : 'border-yellow-500/30 bg-yellow-500/5'}`}>
-                            <div className="flex items-center justify-center gap-2 mb-4">
-                                <Award className={`w-6 h-6 ${result.hiring_verdict.is_hireable_now ? 'text-green-400' : 'text-yellow-400'}`} />
-                                <h3 className="text-xl font-semibold text-white">Hiring Verdict</h3>
-                            </div>
-                            <div className={`text-2xl font-bold mb-4 ${result.hiring_verdict.is_hireable_now ? 'text-green-400' : 'text-yellow-400'}`}>
-                                {result.hiring_verdict.verdict}
-                            </div>
-                            {result.hiring_verdict.minimum_bar_missing && (
-                                <p className="text-zinc-400 mb-4">
-                                    <strong>Minimum bar missing:</strong> {result.hiring_verdict.minimum_bar_missing}
-                                </p>
-                            )}
-                            <p className="text-lg text-white">{result.hiring_verdict.final_recommendation}</p>
-                        </div>
-
-                        <div className="flex justify-center pt-8">
-                            <button
-                                onClick={() => { setStep("input"); setResult(null); }}
-                                className="text-zinc-400 hover:text-white transition-colors"
+                        {/* Tab Content */}
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                variants={tabContentVariants}
+                                initial="initial"
+                                animate="animate"
+                                exit="exit"
                             >
+                                {renderTabContent()}
+                            </motion.div>
+                        </AnimatePresence>
+
+                        {/* Start New Analysis */}
+                        <div className="flex justify-center pt-8 pb-12">
+                            <button
+                                onClick={() => { setStep("input"); setResult(null); setActiveTab("summary"); }}
+                                className="flex items-center gap-2 px-6 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all group"
+                            >
+                                <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
                                 Start New Analysis
                             </button>
                         </div>

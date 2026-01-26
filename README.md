@@ -113,6 +113,7 @@ Existing solutions fail to provide **calibration over aspiration** — they don'
 - ⚡ **Fast API Backend** — High-performance REST API with automatic documentation
 - 🔄 **Real-time Analysis** — Streaming analysis with progress indicators
 - 🎨 **Modern UI/UX** — Glassmorphism design with smooth animations
+- 🗂️ **Tabbed Interface** — 6 interactive tabs for organized result navigation
 - 📱 **Responsive Design** — Works across desktop and mobile devices
 - 🔒 **Type Safety** — Full TypeScript frontend with Pydantic backend validation
 - 🔁 **Retry Logic** — Intelligent retry mechanism for API rate limits
@@ -126,8 +127,8 @@ Existing solutions fail to provide **calibration over aspiration** — they don'
 │                              USER INTERFACE                              │
 │                         (Next.js 16 + React 19)                          │
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────────────────┐  │
-│  │  Home Page  │  │ Analysis Flow│  │       Result Dashboard          │  │
-│  │   (Hero)    │→ │ (File Upload)│→ │  (7-Section Evaluation Report)  │  │
+│  │  Home Page  │  │ Analysis Flow│  │    Tabbed Results Dashboard     │  │
+│  │   (Hero)    │→ │ (File Upload)│→ │  (6 Interactive Section Tabs)   │  │
 │  └─────────────┘  └──────────────┘  └─────────────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │ HTTP REST API
@@ -298,19 +299,24 @@ Click the **"Analyze My Resume"** button on the home page.
 1. **Enter Target Role**: Specify the job title you're targeting (e.g., "Machine Learning Engineer", "Senior Data Scientist")
 2. **Upload Resume**: Drag and drop or click to upload your PDF resume
 
-### Step 4: Review Results
+### Step 4: Navigate Results with Tabs
 
-The platform generates a comprehensive 7-section evaluation report:
+The platform generates a comprehensive evaluation report organized into **6 interactive tabs**:
 
-| Section | Description |
-|---------|-------------|
-| 🎯 **Overall Fit** | Score (0-100) and fit category with summary |
-| 📊 **Skill Breakdown** | 7 competency areas scored 0-10 with justifications |
-| ✅ **Demonstrated Work** | Verified accomplishments from your resume |
-| ⚠️ **Detected Gaps** | Missing skills with severity and impact |
-| 💡 **Action Plan** | Specific projects to build for each gap |
-| 📝 **Resume Recommendations** | Coaching feedback for resume bullets |
-| ⚖️ **Hiring Verdict** | Final assessment and recommendation |
+| Tab | Icon | Description |
+|-----|------|-------------|
+| **Summary** | 🎯 | Overall score (0-100), fit category, hiring verdict with animated progress ring |
+| **Skills** | 📊 | 7 competency areas scored 0-10 with progress bars and justifications |
+| **Experience** | 💼 | Verified accomplishments from your resume with evidence type badges |
+| **Gaps** | ⚠️ | Missing skills with severity ratings (Low/Medium/High) and explanations |
+| **Action Plan** | 💡 | Timeline-style prioritized projects to build for each gap |
+| **Resume Tips** | 📄 | Specific coaching feedback for resume sections and bullets |
+
+**Navigation Features:**
+- Sticky tab bar for easy navigation
+- Smooth animated transitions between tabs
+- Color-coded severity and status indicators
+- Responsive design for all screen sizes
 
 ---
 
@@ -462,10 +468,16 @@ Users can upload their resume and select a target role through an intuitive drag
 
 ![Analysis Page](docs/screenshots/analyze_page.png)
 
-### Results Dashboard
-The comprehensive 7-section report displays skill scores with progress bars, gap severity indicators, and actionable improvement plans.
+### Tabbed Results Dashboard
+The comprehensive evaluation report is organized into 6 interactive tabs:
+- **Summary Tab**: Animated score ring, fit category, and hiring verdict
+- **Skills Tab**: Skill breakdown with progress bars and detailed justifications
+- **Experience Tab**: Demonstrated work with evidence type color-coded badges
+- **Gaps Tab**: Missing skills with severity levels and improvement context
+- **Action Plan Tab**: Timeline-style project recommendations
+- **Resume Tips Tab**: Specific document improvement suggestions
 
-*Note: Run an analysis to see the full results dashboard with your personalized evaluation.*
+*Note: Run an analysis to explore the full tabbed results dashboard with your personalized evaluation.*
 
 ---
 
