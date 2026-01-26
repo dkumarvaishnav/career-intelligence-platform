@@ -263,18 +263,28 @@ npm install
 
 ### Step 4: Start the Application
 
-**Terminal 1 - Backend:**
-```bash
-# From project root
-uvicorn backend.main:app --reload --port 8000
+**Option A: One-Command Start (Recommended)**
+```powershell
+# From project root - starts both services automatically
+.\dev.ps1
 ```
 
-**Terminal 2 - Frontend:**
+**Option B: Manual Start (Two Terminals)**
+
+*Terminal 1 - Backend:*
+```bash
+# From project root
+python -m uvicorn backend.main:app --reload --port 8000
+```
+
+*Terminal 2 - Frontend:*
 ```bash
 # From frontend directory
 cd frontend
 npm run dev
 ```
+
+> ⚠️ **Important**: Both services must be running. If you see "Failed to fetch" error, the backend is not running.
 
 ### Step 5: Access the Application
 

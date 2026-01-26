@@ -276,9 +276,9 @@ function QuickStat({ icon, label, value, color }: { icon: React.ReactNode; label
 function SkillsTab({ result }: { result: AnalysisResponse }) {
     return (
         <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-            <motion.div variants={staggerItem} className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Skill Breakdown</h2>
-                <p className="text-zinc-400">Detailed assessment of your technical competencies</p>
+            <motion.div variants={staggerItem} className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Skill Breakdown</h2>
+                <p className="text-zinc-400 text-lg">Detailed assessment of your technical competencies</p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 gap-5">
@@ -332,9 +332,9 @@ function ExperienceTab({ result }: { result: AnalysisResponse }) {
 
     return (
         <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-            <motion.div variants={staggerItem} className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Demonstrated Work</h2>
-                <p className="text-zinc-400">Verified accomplishments from your resume</p>
+            <motion.div variants={staggerItem} className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Demonstrated Work</h2>
+                <p className="text-zinc-400 text-lg">Verified accomplishments from your resume</p>
             </motion.div>
 
             {result.demonstrated_work.length === 0 ? (
@@ -374,9 +374,9 @@ function ExperienceTab({ result }: { result: AnalysisResponse }) {
 function GapsTab({ result }: { result: AnalysisResponse }) {
     return (
         <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-            <motion.div variants={staggerItem} className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Detected Gaps</h2>
-                <p className="text-zinc-400">Areas requiring attention for your target role</p>
+            <motion.div variants={staggerItem} className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Detected Gaps</h2>
+                <p className="text-zinc-400 text-lg">Areas requiring attention for your target role</p>
             </motion.div>
 
             {result.detected_gaps.length === 0 ? (
@@ -428,9 +428,9 @@ function GapsTab({ result }: { result: AnalysisResponse }) {
 function ActionTab({ result }: { result: AnalysisResponse }) {
     return (
         <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-            <motion.div variants={staggerItem} className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Action Plan</h2>
-                <p className="text-zinc-400">Prioritized steps to improve your role readiness</p>
+            <motion.div variants={staggerItem} className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Action Plan</h2>
+                <p className="text-zinc-400 text-lg">Prioritized steps to improve your role readiness</p>
             </motion.div>
 
             {result.action_plan.length === 0 ? (
@@ -508,9 +508,9 @@ function ResumeTab({ result }: { result: AnalysisResponse }) {
 
     return (
         <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-            <motion.div variants={staggerItem} className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Resume Recommendations</h2>
-                <p className="text-zinc-400">Specific improvements for your resume document</p>
+            <motion.div variants={staggerItem} className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Resume Recommendations</h2>
+                <p className="text-zinc-400 text-lg">Specific improvements for your resume document</p>
             </motion.div>
 
             {result.resume_recommendations.length === 0 ? (
@@ -575,6 +575,19 @@ export default function AnalysisFlow() {
         setError("");
 
         try {
+            // First check if backend is reachable
+            try {
+                const healthCheck = await fetch("http://localhost:8000/health", {
+                    method: "GET",
+                    signal: AbortSignal.timeout(5000) // 5 second timeout
+                });
+                if (!healthCheck.ok) {
+                    throw new Error("Backend health check failed");
+                }
+            } catch {
+                throw new Error("BACKEND_UNAVAILABLE");
+            }
+
             const formData = new FormData();
             formData.append("file", file);
 
@@ -583,7 +596,7 @@ export default function AnalysisFlow() {
                 body: formData,
             });
 
-            if (!parseRes.ok) throw new Error("Failed to parse resume");
+            if (!parseRes.ok) throw new Error("Failed to parse resume. Please ensure you uploaded a valid PDF file.");
             const parseData = await parseRes.json();
 
             const analyzeRes = await fetch("http://localhost:8000/api/analyze", {
@@ -595,14 +608,23 @@ export default function AnalysisFlow() {
                 })
             });
 
-            if (!analyzeRes.ok) throw new Error("Analysis failed. Backend error.");
+            if (!analyzeRes.ok) {
+                const errorText = await analyzeRes.text();
+                throw new Error(`Analysis failed: ${errorText || 'Backend error'}`);
+            }
             const analyzeData = await analyzeRes.json();
 
             setResult(analyzeData);
             setActiveTab("summary");
             setStep("result");
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : String(err));
+            const errorMessage = err instanceof Error ? err.message : String(err);
+
+            if (errorMessage === "BACKEND_UNAVAILABLE" || errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+                setError("🔌 Backend server is not running. Please start the backend first:\n\n1. Open a terminal in the project root\n2. Run: python -m uvicorn backend.main:app --reload --port 8000\n\nOr run dev.ps1 to start both services.");
+            } else {
+                setError(errorMessage);
+            }
             setStep("input");
         }
     };
@@ -691,10 +713,12 @@ export default function AnalysisFlow() {
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center gap-3"
+                                className="p-5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400"
                             >
-                                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                                <span>{error}</span>
+                                <div className="flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                    <span className="whitespace-pre-wrap text-sm">{error}</span>
+                                </div>
                             </motion.div>
                         )}
 
@@ -749,31 +773,38 @@ export default function AnalysisFlow() {
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-6"
                     >
-                        {/* Tab Navigation */}
-                        <div className="glass rounded-2xl p-2 sticky top-4 z-20 backdrop-blur-xl">
-                            <div className="flex overflow-x-auto gap-1 pb-1 scrollbar-hide">
-                                {tabs.map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`relative flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${activeTab === tab.id
-                                            ? "text-white"
-                                            : "text-zinc-400 hover:text-white hover:bg-white/5"
-                                            }`}
-                                    >
-                                        {activeTab === tab.id && (
-                                            <motion.div
-                                                layoutId="activeTab"
-                                                className="absolute inset-0 bg-gradient-to-r from-primary/80 to-violet-600/80 rounded-xl"
-                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                            />
-                                        )}
-                                        <span className="relative z-10">{tab.icon}</span>
-                                        <span className="relative z-10">{tab.label}</span>
-                                    </button>
-                                ))}
+                        {/* Tab Navigation - Fixed at top */}
+                        <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-white/5">
+                            <div className="max-w-6xl mx-auto px-4 py-3">
+                                <div className="glass rounded-2xl p-2">
+                                    <div className="flex overflow-x-auto gap-1 pb-1 scrollbar-hide">
+                                        {tabs.map((tab) => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setActiveTab(tab.id)}
+                                                className={`relative flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${activeTab === tab.id
+                                                    ? "text-white"
+                                                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                                    }`}
+                                            >
+                                                {activeTab === tab.id && (
+                                                    <motion.div
+                                                        layoutId="activeTab"
+                                                        className="absolute inset-0 bg-gradient-to-r from-primary/80 to-violet-600/80 rounded-xl"
+                                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                    />
+                                                )}
+                                                <span className="relative z-10">{tab.icon}</span>
+                                                <span className="relative z-10">{tab.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Spacer for fixed tab bar */}
+                        <div className="h-4" />
 
                         {/* Tab Content */}
                         <AnimatePresence mode="wait">
