@@ -569,35 +569,103 @@ export default function AnalysisFlow() {
         }
     };
 
+    // Helper function to check if backend is available
+    const checkBackendHealth = async (): Promise<boolean> => {
+        try {
+            const response = await fetch("http://localhost:8000/health", {
+                method: "GET",
+            });
+            return response.ok;
+        } catch {
+            return false;
+        }
+    };
+
+    // Helper function with retry logic for API calls
+    const fetchWithRetry = async (
+        url: string,
+        options: RequestInit,
+        maxRetries: number = 3
+    ): Promise<Response> => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`📡 Attempt ${attempt}/${maxRetries}: ${url}`);
+                const response = await fetch(url, options);
+                return response;
+            } catch (error) {
+                console.error(`❌ Attempt ${attempt} failed:`, error);
+
+                if (attempt === maxRetries) {
+                    throw error;
+                }
+
+                // Check if backend is available before retrying
+                console.log("🔄 Checking backend health before retry...");
+                const isHealthy = await checkBackendHealth();
+
+                if (!isHealthy) {
+                    console.log("⏳ Backend not ready, waiting 2 seconds...");
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                    console.log("✅ Backend is healthy, retrying immediately...");
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+        }
+        throw new Error("All retry attempts failed");
+    };
+
     const startAnalysis = async () => {
         if (!role || !file) return;
         setStep("analyzing");
         setError("");
 
         try {
-            // First check if backend is reachable
-            try {
-                const healthCheck = await fetch("http://localhost:8000/health", {
-                    method: "GET",
-                    signal: AbortSignal.timeout(5000) // 5 second timeout
-                });
-                if (!healthCheck.ok) {
-                    throw new Error("Backend health check failed");
-                }
-            } catch {
-                throw new Error("BACKEND_UNAVAILABLE");
-            }
+            console.log("📤 Starting resume analysis...");
+            console.log("📋 Target role:", role);
+            console.log("📄 File:", file.name);
 
+            // Check backend health before starting
+            console.log("🔍 Checking backend availability...");
+            const isHealthy = await checkBackendHealth();
+            if (!isHealthy) {
+                throw new Error("BACKEND_NOT_AVAILABLE");
+            }
+            console.log("✅ Backend is available");
+
+            // Parse Resume
             const formData = new FormData();
             formData.append("file", file);
 
-            const parseRes = await fetch("http://localhost:8000/api/parse-resume", {
-                method: "POST",
-                body: formData,
-            });
+            console.log("📤 Sending resume to backend for parsing...");
+            const parseRes = await fetchWithRetry(
+                "http://localhost:8000/api/parse-resume",
+                {
+                    method: "POST",
+                    body: formData,
+                },
+                3
+            );
 
-            if (!parseRes.ok) throw new Error("Failed to parse resume. Please ensure you uploaded a valid PDF file.");
+            console.log("📥 Parse response:", parseRes.status, parseRes.statusText);
+            if (!parseRes.ok) {
+                const errorText = await parseRes.text();
+                console.error("Parse error:", errorText);
+                throw new Error("Failed to parse resume. Please ensure you uploaded a valid PDF file.");
+            }
+
             const parseData = await parseRes.json();
+            console.log("✅ Resume parsed successfully, text length:", parseData.text?.length || 0);
+
+            console.log("🤖 Sending for AI analysis...");
+            console.log("⏱️ This may take 30-60 seconds...");
+
+            // Create AbortController with 3-minute timeout for long-running AI analysis
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.error("⏱️ Analysis timed out after 3 minutes");
+                controller.abort();
+            }, 180000); // 3 minutes (increased from 2)
 
             const analyzeRes = await fetch("http://localhost:8000/api/analyze", {
                 method: "POST",
@@ -605,25 +673,63 @@ export default function AnalysisFlow() {
                 body: JSON.stringify({
                     resume_text: parseData.text,
                     target_role: { role_title: role }
-                })
+                }),
+                signal: controller.signal,
             });
 
+            clearTimeout(timeoutId);
+
+            console.log("📥 Analysis response:", analyzeRes.status, analyzeRes.statusText);
             if (!analyzeRes.ok) {
                 const errorText = await analyzeRes.text();
+                console.error("Analysis error:", errorText);
                 throw new Error(`Analysis failed: ${errorText || 'Backend error'}`);
             }
+
             const analyzeData = await analyzeRes.json();
+            console.log("✅ Analysis complete! Overall score:", analyzeData.overall_fit?.overall_score);
 
             setResult(analyzeData);
             setActiveTab("summary");
             setStep("result");
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : String(err);
+            const errorName = err instanceof Error ? err.name : 'UnknownError';
+            console.error("❌ Full error object:", err);
+            console.error("❌ Error name:", errorName);
+            console.error("❌ Error message:", errorMessage);
 
-            if (errorMessage === "BACKEND_UNAVAILABLE" || errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
-                setError("🔌 Backend server is not running. Please start the backend first:\n\n1. Open a terminal in the project root\n2. Run: python -m uvicorn backend.main:app --reload --port 8000\n\nOr run dev.ps1 to start both services.");
+            // Check for specific error types
+            if (errorMessage === "BACKEND_NOT_AVAILABLE") {
+                setError(
+                    "🔌 Backend Not Available\n\n" +
+                    "Cannot connect to the backend server.\n\n" +
+                    "Please start the backend:\n" +
+                    "1. Open terminal in project folder\n" +
+                    "2. Run: python -m backend.main\n\n" +
+                    "Or use START.bat to start all services."
+                );
+            } else if (errorName === 'AbortError') {
+                setError(
+                    "⏱️ Analysis Timed Out\n\n" +
+                    "The AI analysis took longer than 3 minutes.\n\n" +
+                    "Try:\n" +
+                    "- Check Backend Server window for errors\n" +
+                    "- Verify GOOGLE_API_KEY in backend/.env\n" +
+                    "- Try with a shorter resume"
+                );
+            } else if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError") || errorMessage === "Load failed") {
+                setError(
+                    "🔌 Connection Lost\n\n" +
+                    "Connection to backend failed. Possible causes:\n" +
+                    "- Backend server stopped or crashed\n" +
+                    "- Network issue\n\n" +
+                    "Please try again. If error persists:\n" +
+                    "1. Check Backend Server window for errors\n" +
+                    "2. Restart with: python -m backend.main"
+                );
             } else {
-                setError(errorMessage);
+                setError(`❌ Error: ${errorMessage}\n\nCheck browser console (F12) for details.`);
             }
             setStep("input");
         }
