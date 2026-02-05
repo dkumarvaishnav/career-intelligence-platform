@@ -1,0 +1,24 @@
+# Render Blueprint for Backend Deployment
+# Deploy at: https://dashboard.render.com/select-repo
+
+services:
+  # Backend FastAPI Service
+  - type: web
+    name: career-intelligence-backend
+    runtime: python
+    plan: free  # Free tier (spins down after 15 min inactivity)
+    # plan: starter  # Upgrade to $7/month for always-on
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GOOGLE_API_KEY
+        sync: false  # You'll set this manually in Render dashboard
+      - key: PYTHON_VERSION
+        value: "3.11"
+    healthCheckPath: /health
+
+    # Auto-deploy from GitHub
+    autoDeploy: true
+
+    # Environment detection
+    # Render provides PORT automatically

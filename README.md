@@ -12,7 +12,7 @@
 
 *Helping early-career professionals calibrate their readiness for target roles with diagnostic clarity and actionable guidance.*
 
-[Features](#-features) • [Architecture](#-system-architecture) • [Installation](#-installation) • [Usage](#-usage) • [API Reference](#-api-reference) • [Screenshots](#-screenshots)
+[Features](#-features) • [Architecture](#-system-architecture) • [Installation](#-installation) • [Usage](#-usage) • [Deployment](#-deployment) • [API Reference](#-api-reference) • [Screenshots](#-screenshots)
 
 </div>
 
@@ -32,8 +32,8 @@
 - [Data Models](#-data-models)
 - [AI Engine](#-ai-engine)
 - [Screenshots](#-screenshots)
+- [Deployment](#-deployment)
 - [Future Enhancements](#-future-enhancements)
-- [Contributors](#-contributors)
 - [License](#-license)
 
 ---
@@ -488,6 +488,33 @@ The comprehensive evaluation report is organized into 6 interactive tabs:
 - **Resume Tips Tab**: Specific document improvement suggestions
 
 *Note: Run an analysis to explore the full tabbed results dashboard with your personalized evaluation.*
+
+---
+
+## 🚀 Deployment
+
+Ready to deploy your Career Intelligence Platform to the cloud? We've prepared everything for a smooth deployment to **Vercel** (frontend) and **Render** (backend).
+
+### Quick Overview
+
+| Component | Platform | Cost |
+|-----------|----------|------|
+| Frontend | Vercel | Free |
+| Backend | Render | Free (spins down) / $7/mo (always on) |
+
+### Deployment Files Included
+
+- `vercel.json` - Vercel deployment configuration
+- `render.yaml` - Render deployment blueprint
+- `DEPLOYMENT.md` - **📚 Complete step-by-step deployment guide**
+
+### Get Started
+
+📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete deployment guide** with:
+- Detailed setup instructions for both platforms
+- Environment variables configuration
+- CORS setup for production
+- Troubleshooting common issues
 
 ---
 

@@ -8,6 +8,9 @@ import {
     Sparkles, TrendingUp, Shield, Zap, ArrowRight, RefreshCw
 } from "lucide-react";
 
+// --- API Configuration ---
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 // --- Types matching new backend schema ---
 interface SkillScore {
     score: number;
@@ -572,7 +575,7 @@ export default function AnalysisFlow() {
     // Helper function to check if backend is available
     const checkBackendHealth = async (): Promise<boolean> => {
         try {
-            const response = await fetch("http://localhost:8000/health", {
+            const response = await fetch(`${API_URL}/health`, {
                 method: "GET",
             });
             return response.ok;
@@ -639,7 +642,7 @@ export default function AnalysisFlow() {
 
             console.log("📤 Sending resume to backend for parsing...");
             const parseRes = await fetchWithRetry(
-                "http://localhost:8000/api/parse-resume",
+                `${API_URL}/api/parse-resume`,
                 {
                     method: "POST",
                     body: formData,
@@ -667,7 +670,7 @@ export default function AnalysisFlow() {
                 controller.abort();
             }, 180000); // 3 minutes (increased from 2)
 
-            const analyzeRes = await fetch("http://localhost:8000/api/analyze", {
+            const analyzeRes = await fetch(`${API_URL}/api/analyze`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
