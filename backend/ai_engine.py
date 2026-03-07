@@ -1,5 +1,6 @@
 import os
 import time
+import httpx
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -276,7 +277,8 @@ Generate a JSON response with this EXACT structure:
       "gap_addressed": "Which gap from detected_gaps this addresses",
       "what_to_build": "Specific build-oriented project that demonstrates the missing skill",
       "project_scope": "Concrete scope: dataset size, features, timeline (aim for 2-4 week projects)",
-      "success_outcome": "What outcome would prove readiness: 'Built X that does Y, demonstrating Z skill'"
+      "success_outcome": "What outcome would prove readiness: 'Built X that does Y, demonstrating Z skill'",
+      "resources": []  // Leave this empty
     }}
     // Prioritize by impact on overall_score (address High severity gaps first)
     // Focus on moving candidate from current fit_category to next tier
@@ -357,6 +359,57 @@ def _fix_field_typos(data: dict) -> dict:
     return data
 
 
+def fetch_resources_for_actions(action_items: list) -> list:
+    """Fetch real-world resources for action items using Serper.dev."""
+    serper_api_key = os.getenv("SERPER_API_KEY")
+    if not serper_api_key:
+        print("SERPER_API_KEY not found. Skipping resource fetch.")
+        return action_items
+
+    for item in action_items:
+        query = f"how to {item.get('what_to_build', '')} tutorial OR course OR guide"
+        try:
+            response = httpx.post(
+                "https://google.serper.dev/search",
+                headers={
+                    "X-API-KEY": serper_api_key,
+                    "Content-Type": "application/json"
+                },
+                json={"q": query, "num": 3},
+                timeout=8.0
+            )
+            data = response.json()
+            organic_results = data.get("organic", [])[:3]
+            resources = []
+            
+            for res in organic_results:
+                link = res.get("link", "")
+                title = res.get("title", "")
+                
+                # Determine type based on URL
+                doc_type = "Article"
+                if "youtube.com" in link or "youtu.be" in link:
+                    doc_type = "Video"
+                elif "coursera.org" in link or "udemy.com" in link or "edx.org" in link:
+                    doc_type = "Course"
+                elif "github.com" in link:
+                    doc_type = "GitHub"
+                
+                resources.append({
+                    "title": title,
+                    "link": link,
+                    "type": doc_type
+                })
+                
+            item["resources"] = resources
+            
+        except Exception as e:
+            print(f"Error fetching resources for query '{query}': {e}")
+            item["resources"] = []
+            
+    return action_items
+
+
 def analyze_resume(resume_text: str, target_role: str, max_retries: int = 3) -> dict:
     """
     Analyzes resume text against target role using LLM.
@@ -373,7 +426,13 @@ def analyze_resume(resume_text: str, target_role: str, max_retries: int = 3) -> 
                 "resume_text": resume_text,
                 "target_role": target_role,
             })
-            return _fix_field_typos(result)
+            
+            fixed_result = _fix_field_typos(result)
+            
+            if "action_plan" in fixed_result and fixed_result["action_plan"]:
+                fixed_result["action_plan"] = fetch_resources_for_actions(fixed_result["action_plan"])
+                
+            return fixed_result
         except Exception as e:
             last_error = e
             error_str = str(e)

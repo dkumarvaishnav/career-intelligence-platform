@@ -36,7 +36,7 @@ interface AnalysisResponse {
     skill_breakdown: SkillBreakdown;
     demonstrated_work: { description: string; evidence_type: string }[];
     detected_gaps: { gap_name: string; severity: string; why_it_matters: string; missing_evidence: string }[];
-    action_plan: { gap_addressed: string; what_to_build: string; project_scope: string; success_outcome: string }[];
+    action_plan: { gap_addressed: string; what_to_build: string; project_scope: string; success_outcome: string; resources?: { title: string; link: string; type: string; }[] }[];
     resume_recommendations: { issue_type: string; section_or_bullet: string; recommendation: string }[];
     hiring_verdict: {
         is_hireable_now: boolean;
@@ -490,6 +490,52 @@ function ActionTab({ result }: { result: AnalysisResponse }) {
                                             <p className="text-sm text-emerald-300">{item.success_outcome}</p>
                                         </div>
                                     </div>
+
+                                    {item.resources && item.resources.length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-white/10">
+                                            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Recommended Resources</p>
+                                            <div className="flex flex-col gap-2">
+                                                {item.resources.map((res, i) => (
+                                                    <a
+                                                        key={i}
+                                                        href={res.link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group/link border border-white/5 hover:border-primary/30"
+                                                    >
+                                                        <div className="flex items-center gap-3 overflow-hidden">
+                                                            {res.type === "Video" ? (
+                                                                <div className="p-2 rounded-lg bg-rose-500/20 text-rose-400">
+                                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" /></svg>
+                                                                </div>
+                                                            ) : res.type === "Course" ? (
+                                                                <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                                                </div>
+                                                            ) : res.type === "GitHub" ? (
+                                                                <div className="p-2 rounded-lg bg-zinc-500/20 text-zinc-400">
+                                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="p-2 rounded-lg bg-sky-500/20 text-sky-400">
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex flex-col truncate">
+                                                                <span className="text-sm font-medium text-zinc-300 group-hover/link:text-white transition-colors truncate">
+                                                                    {res.title}
+                                                                </span>
+                                                                <span className="text-xs text-zinc-500 font-mono truncate max-w-[200px] md:max-w-xs block">
+                                                                    {new URL(res.link).hostname}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <ArrowRight className="w-4 h-4 text-zinc-600 group-hover/link:text-primary transition-colors flex-shrink-0" />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         ))}

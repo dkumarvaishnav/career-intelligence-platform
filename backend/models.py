@@ -119,12 +119,19 @@ class DetectedGap(BaseModel):
         return v
 
 
+class ActionItemResource(BaseModel):
+    """Resource to help complete the action item"""
+    title: str
+    link: str
+    type: str
+
 class ActionItem(BaseModel):
     """Section 5: Actionable improvement item"""
     gap_addressed: str = Field(..., description="Which gap this action addresses")
     what_to_build: str = Field(..., description="Exactly what should be built or refactored")
     project_scope: str = Field(..., description="Suggested project scope")
     success_outcome: str = Field(..., description="What outcome would satisfy a recruiter")
+    resources: Optional[List[ActionItemResource]] = Field(default=None, description="Leave this empty.")
 
 
 class ResumeRecommendation(BaseModel):
