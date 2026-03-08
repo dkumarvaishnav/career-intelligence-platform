@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 
 // --- API Configuration ---
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Hardcoding local URL since all deployment configurations are removed
+const API_URL = "http://localhost:8000";
 
 // --- Types matching new backend schema ---
 interface SkillScore {
