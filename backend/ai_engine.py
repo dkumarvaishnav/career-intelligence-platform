@@ -410,6 +410,61 @@ def fetch_resources_for_actions(action_items: list) -> list:
     return action_items
 
 
+def fetch_jobs_for_role(target_role: str) -> list:
+    """Fetch real-world jobs using Serper.dev, filtered for India or Remote."""
+    serper_api_key = os.getenv("SERPER_API_KEY")
+    if not serper_api_key:
+        print("SERPER_API_KEY not found. Skipping job fetch.")
+        return []
+
+    query = f'"{target_role}" ("India" OR "Remote") (site:boards.greenhouse.io OR site:jobs.lever.co OR site:boards.ashbyhq.com OR site:wellfound.com OR site:naukri.com)'
+    try:
+        response = httpx.post(
+            "https://google.serper.dev/search",
+            headers={
+                "X-API-KEY": serper_api_key,
+                "Content-Type": "application/json"
+            },
+            json={"q": query, "num": 5, "gl": "in"},
+            timeout=8.0
+        )
+        data = response.json()
+        organic_results = data.get("organic", [])[:5]
+        jobs = []
+        
+        for res in organic_results:
+            link = res.get("link", "")
+            title = res.get("title", "")
+            snippet = res.get("snippet", "")
+            
+            # Simple heuristic for extraction
+            company = "Company"
+            if " - " in title:
+                parts = title.split(" - ")
+                if len(parts) > 1:
+                    company = parts[-1].strip()
+                    title = "-".join(parts[:-1]).strip()
+            elif " at " in title:
+                parts = title.split(" at ")
+                if len(parts) > 1:
+                    company = parts[1].strip()
+                    title = parts[0].strip()
+                    
+            location = "India / Remote"
+            
+            jobs.append({
+                "title": title,
+                "company": company,
+                "location": location,
+                "link": link,
+                "snippet": snippet
+            })
+            
+        return jobs
+    except Exception as e:
+        print(f"Error fetching jobs for query '{query}': {e}")
+        return []
+
 def analyze_resume(resume_text: str, target_role: str, max_retries: int = 3) -> dict:
     """
     Analyzes resume text against target role using LLM.
@@ -431,6 +486,9 @@ def analyze_resume(resume_text: str, target_role: str, max_retries: int = 3) -> 
             
             if "action_plan" in fixed_result and fixed_result["action_plan"]:
                 fixed_result["action_plan"] = fetch_resources_for_actions(fixed_result["action_plan"])
+
+            if "recommended_jobs" not in fixed_result or not fixed_result["recommended_jobs"]:
+                fixed_result["recommended_jobs"] = fetch_jobs_for_role(target_role)
                 
             return fixed_result
         except Exception as e:

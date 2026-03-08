@@ -5,7 +5,7 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
     Upload, ChevronRight, CheckCircle, AlertCircle, Loader2,
     Target, BarChart3, Briefcase, AlertTriangle, Lightbulb, FileText, Award,
-    Sparkles, TrendingUp, Shield, Zap, ArrowRight, RefreshCw
+    Sparkles, TrendingUp, Shield, Zap, ArrowRight, RefreshCw, BriefcaseBusiness, Building, MapPin
 } from "lucide-react";
 
 // --- API Configuration ---
@@ -44,10 +44,17 @@ interface AnalysisResponse {
         minimum_bar_missing: string | null;
         final_recommendation: string;
     };
+    recommended_jobs: {
+        title: string;
+        link: string;
+        company: string;
+        location: string;
+        snippet: string;
+    }[];
 }
 
 // --- Tab Types ---
-type TabId = "summary" | "skills" | "experience" | "gaps" | "action" | "resume";
+type TabId = "summary" | "skills" | "experience" | "gaps" | "action" | "resume" | "jobs";
 
 interface Tab {
     id: TabId;
@@ -114,6 +121,7 @@ const tabs: Tab[] = [
     { id: "gaps", label: "Gaps", icon: <AlertTriangle className="w-4 h-4" />, description: "Areas for improvement" },
     { id: "action", label: "Action Plan", icon: <Lightbulb className="w-4 h-4" />, description: "Next steps" },
     { id: "resume", label: "Resume Tips", icon: <FileText className="w-4 h-4" />, description: "Document improvements" },
+    { id: "jobs", label: "Jobs", icon: <BriefcaseBusiness className="w-4 h-4" />, description: "Recommended Jobs" },
 ];
 
 // --- Animation Variants ---
@@ -603,6 +611,65 @@ function ResumeTab({ result }: { result: AnalysisResponse }) {
     );
 }
 
+function JobsTab({ result }: { result: AnalysisResponse }) {
+    return (
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+            <motion.div variants={staggerItem} className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Recommended Jobs</h2>
+                <p className="text-zinc-400 text-lg">Real-time open roles matching your profile in India or Remote</p>
+            </motion.div>
+
+            {!result.recommended_jobs || result.recommended_jobs.length === 0 ? (
+                <motion.div variants={staggerItem} className="glass rounded-2xl p-12 text-center">
+                    <BriefcaseBusiness className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+                    <p className="text-zinc-400">No specific jobs found right now. Try adjusting your target role.</p>
+                </motion.div>
+            ) : (
+                <div className="grid md:grid-cols-2 gap-5">
+                    {result.recommended_jobs.map((job, index) => (
+                        <motion.div
+                            key={index}
+                            variants={staggerItem}
+                            custom={index}
+                            className="glass rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300 group flex flex-col justify-between"
+                        >
+                            <div>
+                                <div className="flex justify-between items-start mb-3">
+                                    <h3 className="font-semibold text-lg text-white group-hover:text-primary transition-colors line-clamp-2">
+                                        {job.title}
+                                    </h3>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-zinc-400">
+                                    <div className="flex items-center gap-1">
+                                        <Building className="w-4 h-4" />
+                                        {job.company}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <MapPin className="w-4 h-4" />
+                                        {job.location}
+                                    </div>
+                                </div>
+                                <p className="text-sm text-zinc-300 leading-relaxed line-clamp-3 mb-6">
+                                    {job.snippet}
+                                </p>
+                            </div>
+                            <a
+                                href={job.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/50 text-white font-medium text-center transition-all flex items-center justify-center gap-2 group-hover:bg-primary/20 group-hover:text-primary mt-4"
+                            >
+                                Apply Now
+                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </a>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
 // --- Main Component ---
 export default function AnalysisFlow() {
     const [step, setStep] = useState<"input" | "analyzing" | "result">("input");
@@ -794,6 +861,7 @@ export default function AnalysisFlow() {
             case "gaps": return <GapsTab result={result} />;
             case "action": return <ActionTab result={result} />;
             case "resume": return <ResumeTab result={result} />;
+            case "jobs": return <JobsTab result={result} />;
             default: return null;
         }
     };

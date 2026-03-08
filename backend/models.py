@@ -163,6 +163,14 @@ class HiringVerdict(BaseModel):
         return v
 
 
+class RecommendedJob(BaseModel):
+    """Job recommendation based on the processed resume"""
+    title: str
+    link: str
+    company: str
+    location: str
+    snippet: str
+
 class AnalysisResponse(BaseModel):
     """Complete Hiring-Style Evaluation Report"""
     overall_fit: OverallFitSummary
@@ -172,3 +180,5 @@ class AnalysisResponse(BaseModel):
     action_plan: List[ActionItem]
     resume_recommendations: List[ResumeRecommendation]
     hiring_verdict: HiringVerdict
+    recommended_jobs: Optional[List[RecommendedJob]] = Field(default_factory=list, description="Leave this empty.")
+
