@@ -48,23 +48,9 @@ app = FastAPI(
 )
 
 
-# Build allowed origins from environment + localhost
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
-# Add production frontend URL if set (e.g., https://your-app.vercel.app)
-frontend_url = os.environ.get("FRONTEND_URL")
-if frontend_url:
-    allowed_origins.append(frontend_url)
-    # Also allow www subdomain
-    if frontend_url.startswith("https://"):
-        allowed_origins.append(frontend_url.replace("https://", "https://www."))
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],  # Allow all origins so Lovable and other frontends can connect
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
