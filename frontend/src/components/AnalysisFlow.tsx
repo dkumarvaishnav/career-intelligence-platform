@@ -5,7 +5,7 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
     Upload, ChevronRight, CheckCircle, AlertCircle, Loader2,
     Target, BarChart3, Briefcase, AlertTriangle, Lightbulb, FileText, Award,
-    Sparkles, TrendingUp, Shield, Zap, ArrowRight, RefreshCw, BriefcaseBusiness, Building, MapPin
+    Sparkles, TrendingUp, Shield, Zap, ArrowRight, RefreshCw, BriefcaseBusiness, Building, MapPin, Mail, X, Copy
 } from "lucide-react";
 
 // --- API Configuration ---
@@ -611,9 +611,53 @@ function ResumeTab({ result }: { result: AnalysisResponse }) {
     );
 }
 
-function JobsTab({ result }: { result: AnalysisResponse }) {
+function JobsTab({ result, resumeText }: { result: AnalysisResponse, resumeText: string }) {
+    const [generatingFor, setGeneratingFor] = useState<number | null>(null);
+    const [generatedEmail, setGeneratedEmail] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedJob, setSelectedJob] = useState<{ title: string, company: string } | null>(null);
+    const [copied, setCopied] = useState(false);
+
+    const handleGenerateEmail = async (job: any, index: number) => {
+        setGeneratingFor(index);
+        setSelectedJob({ title: job.title, company: job.company });
+        setIsModalOpen(true);
+        setGeneratedEmail(null);
+        setCopied(false);
+
+        try {
+            const response = await fetch(`${API_URL}/api/generate-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    resume_text: resumeText,
+                    job_title: job.title,
+                    company_name: job.company,
+                    job_description: job.snippet
+                })
+            });
+
+            if (!response.ok) throw new Error("Failed to generate email");
+
+            const data = await response.json();
+            setGeneratedEmail(data.email_body);
+        } catch (err) {
+            setGeneratedEmail("Failed to generate cold email. Please try again.");
+        } finally {
+            setGeneratingFor(null);
+        }
+    };
+
+    const copyToClipboard = () => {
+        if (generatedEmail) {
+            navigator.clipboard.writeText(generatedEmail);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     return (
-        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6 relative">
             <motion.div variants={staggerItem} className="text-center mb-6">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Recommended Jobs</h2>
                 <p className="text-zinc-400 text-lg">Real-time open roles matching your profile in India or Remote</p>
@@ -653,19 +697,88 @@ function JobsTab({ result }: { result: AnalysisResponse }) {
                                     {job.snippet}
                                 </p>
                             </div>
-                            <a
-                                href={job.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/50 text-white font-medium text-center transition-all flex items-center justify-center gap-2 group-hover:bg-primary/20 group-hover:text-primary mt-4"
-                            >
-                                Apply Now
-                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </a>
+                            <div className="flex flex-col gap-2 mt-4">
+                                <a
+                                    href={job.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full py-2.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary font-medium text-center transition-all flex items-center justify-center gap-2 group-hover:bg-primary/30"
+                                >
+                                    Apply Now
+                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                </a>
+                                <button
+                                    onClick={() => handleGenerateEmail(job, index)}
+                                    disabled={generatingFor === index}
+                                    className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 text-zinc-300 font-medium text-center transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {generatingFor === index ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+                                    ) : (
+                                        <><Mail className="w-4 h-4" /> AI Cold Email</>
+                                    )}
+                                </button>
+                            </div>
                         </motion.div>
                     ))}
                 </div>
             )}
+
+            {/* Email Modal */}
+            <AnimatePresence>
+                {isModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        >
+                            <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-4">
+                                <div>
+                                    <h3 className="text-xl font-semibold text-white">AI Cold Outreach Email</h3>
+                                    <p className="text-sm text-zinc-400 mt-1">For {selectedJob?.title} at {selectedJob?.company}</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto min-h-[200px] mb-4 pr-2 custom-scrollbar">
+                                {!generatedEmail ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-zinc-400 gap-3 py-10">
+                                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                        <p>Crafting a compelling email connecting your resume to the job...</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">
+                                        {generatedEmail}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-4 border-t border-white/10 flex justify-end">
+                                <button
+                                    onClick={copyToClipboard}
+                                    disabled={!generatedEmail}
+                                    className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {copied ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                                    {copied ? "Copied!" : "Copy to Clipboard"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }
@@ -675,6 +788,7 @@ export default function AnalysisFlow() {
     const [step, setStep] = useState<"input" | "analyzing" | "result">("input");
     const [role, setRole] = useState("");
     const [file, setFile] = useState<File | null>(null);
+    const [resumeText, setResumeText] = useState("");
     const [result, setResult] = useState<AnalysisResponse | null>(null);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState<TabId>("summary");
@@ -772,6 +886,7 @@ export default function AnalysisFlow() {
 
             const parseData = await parseRes.json();
             console.log("✅ Resume parsed successfully, text length:", parseData.text?.length || 0);
+            setResumeText(parseData.text);
 
             console.log("🤖 Sending for AI analysis...");
             console.log("⏱️ This may take 30-60 seconds...");
@@ -861,7 +976,7 @@ export default function AnalysisFlow() {
             case "gaps": return <GapsTab result={result} />;
             case "action": return <ActionTab result={result} />;
             case "resume": return <ResumeTab result={result} />;
-            case "jobs": return <JobsTab result={result} />;
+            case "jobs": return <JobsTab result={result} resumeText={resumeText} />;
             default: return null;
         }
     };

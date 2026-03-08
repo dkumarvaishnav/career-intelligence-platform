@@ -3,7 +3,7 @@ import time
 import httpx
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from backend.models import AnalysisResponse
 
 # Load API Key
@@ -504,3 +504,44 @@ def analyze_resume(resume_text: str, target_role: str, max_retries: int = 3) -> 
 
     print(f"AI Error after {max_retries} retries: {last_error}")
     raise last_error
+
+COLD_EMAIL_PROMPT = """
+You are an expert career coach and technical recruiter.
+Write a concise, compelling cold outreach email / cover letter for the candidate applying to the following job:
+Company: {company_name}
+Job Title: {job_title}
+Job Snippet/Description: {job_description}
+
+Here is the candidate's parsed resume:
+{resume_text}
+
+Rules:
+1. Keep it under 200 words.
+2. Start with a strong hook about why the candidate is a fit for this specific role at {company_name}.
+3. Highlight 2-3 specific technical achievements from the resume that directly map to the job snippet provided.
+4. End with a soft call to action.
+5. Do NOT hallucinate skills or experience the candidate does not have.
+6. The tone should be professional, confident, and enthusiastic but NOT desperate.
+
+Output ONLY the email body as plain text. Do NOT include JSON, do NOT include markdown code blocks, just the text. Use placeholders like [Your Name] if you can't find it in the resume text.
+"""
+
+def generate_cold_email(resume_text: str, job_title: str, company_name: str, job_description: str) -> str:
+    """
+    Generates a personalized cold email for a specific job using the candidate's resume.
+    """
+    prompt = ChatPromptTemplate.from_template(COLD_EMAIL_PROMPT)
+    chain = prompt | llm | StrOutputParser()
+    
+    try:
+        result = chain.invoke({
+            "resume_text": resume_text,
+            "job_title": job_title,
+            "company_name": company_name,
+            "job_description": job_description
+        })
+        return result
+    except Exception as e:
+        print(f"Error generating cold email: {e}")
+        raise e
+

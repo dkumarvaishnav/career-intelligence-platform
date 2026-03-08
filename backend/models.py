@@ -182,3 +182,15 @@ class AnalysisResponse(BaseModel):
     hiring_verdict: HiringVerdict
     recommended_jobs: Optional[List[RecommendedJob]] = Field(default_factory=list, description="Leave this empty.")
 
+class CoverLetterRequest(BaseModel):
+    """Request format for cold email generation"""
+    resume_text: str
+    job_title: str
+    company_name: str
+    job_description: str
+
+class CoverLetterResponse(BaseModel):
+    """Response format for cold email generation"""
+    email_body: str
+
+

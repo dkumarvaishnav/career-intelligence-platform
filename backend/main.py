@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.resume_parser import extract_text_from_pdf
-from backend.models import AnalysisRequest, AnalysisResponse
+from backend.models import AnalysisRequest, AnalysisResponse, CoverLetterRequest, CoverLetterResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -137,6 +137,31 @@ async def analyze_endpoint(request: AnalysisRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Analysis failed: {str(e)}. Server is still running."
+        )
+
+
+@app.post("/api/generate-email", response_model=CoverLetterResponse)
+async def generate_email_endpoint(request: CoverLetterRequest):
+    """Generate a cohesive cold email based on resume and job."""
+    from backend.ai_engine import generate_cold_email
+    
+    logger.info(f"EMAIL GEN REQUEST | Job: {request.job_title} at {request.company_name}")
+    
+    try:
+        email_body = await asyncio.to_thread(
+            generate_cold_email,
+            request.resume_text,
+            request.job_title,
+            request.company_name,
+            request.job_description
+        )
+        return {"email_body": email_body}
+    except Exception as e:
+        logger.error(f"EMAIL GEN FAILED | {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=f"Email generation failed: {str(e)}."
         )
 
 
